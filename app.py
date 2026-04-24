@@ -6,12 +6,21 @@ from google import genai
 
 # Load env
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
+
+api_key = None
+
+# Try Streamlit secrets first (deployment)
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+
+# Fallback to local .env
+if not api_key:
+    api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
     st.error("API key not found.")
     st.stop()
-
+    
 client = genai.Client(api_key=api_key)
 
 
