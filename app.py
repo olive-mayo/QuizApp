@@ -1,28 +1,28 @@
 import os
 import json
 import streamlit as st
-from dotenv import load_dotenv
 from google import genai
 
-# Load env
-load_dotenv()
+# ----------- API KEY HANDLING (CLEAN) -----------
 
 api_key = None
 
-# Try Streamlit secrets first (deployment)
+# Try Streamlit Cloud secrets first
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 
-# Fallback to local .env
+# Fallback for local environment
 if not api_key:
     api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
     st.error("API key not found.")
     st.stop()
-    
+
 client = genai.Client(api_key=api_key)
 
+
+# ----------- QUESTION GENERATION -----------
 
 def get_quiz_questions(topic, difficulty, count=5):
     models = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
@@ -79,7 +79,7 @@ def get_quiz_questions(topic, difficulty, count=5):
             if "503" in str(e) or "429" in str(e):
                 continue
 
-    # fallback
+    # fallback (never fail completely)
     return [{
         "question": "What is the capital of France?",
         "options": {
@@ -92,12 +92,12 @@ def get_quiz_questions(topic, difficulty, count=5):
     }]
 
 
-# ---------------- UI ----------------
+# ----------- UI -----------
 
 st.set_page_config(page_title="AI Quiz App", layout="centered")
 st.title("🧠 AI Quiz App")
 
-# Session state init
+# Session state
 if "questions" not in st.session_state:
     st.session_state.questions = []
 if "current" not in st.session_state:
@@ -111,6 +111,7 @@ if "selected" not in st.session_state:
 
 
 # ----------- START SCREEN -----------
+
 if not st.session_state.questions:
 
     topic = st.text_input("Enter Topic")
@@ -126,7 +127,9 @@ if not st.session_state.questions:
         else:
             st.warning("Enter a topic")
 
+
 # ----------- QUIZ SCREEN -----------
+
 else:
     questions = st.session_state.questions
     idx = st.session_state.current
@@ -145,7 +148,6 @@ else:
             format_func=lambda x: f"{x}) {options[x]}"
         )
 
-        # Submit button
         if not st.session_state.answered:
             if st.button("Submit"):
                 st.session_state.answered = True
@@ -153,14 +155,12 @@ else:
                 if st.session_state.selected == q["answer"]:
                     st.session_state.score += 1
 
-        # Show result (PERSISTENT)
         if st.session_state.answered:
             if st.session_state.selected == q["answer"]:
                 st.success("✅ Correct!")
             else:
                 st.error(f"❌ Wrong! Correct answer: {q['answer']}")
 
-            # Next button
             if st.button("Next Question"):
                 st.session_state.current += 1
                 st.session_state.answered = False
@@ -168,7 +168,6 @@ else:
                 st.rerun()
 
     else:
-        # ----------- RESULT SCREEN -----------
         st.subheader("🎉 Quiz Completed!")
         st.write(f"Final Score: {st.session_state.score}/{len(questions)}")
 
